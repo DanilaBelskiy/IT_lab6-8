@@ -1,13 +1,13 @@
 import java.awt.geom.Rectangle2D;
 
-public class Mandelbrot  extends FractalGenerator {
+public class Tricorn extends FractalGenerator{
     public static final int MAX_ITERATIONS = 2000;
     @Override
     public void getInitialRange(Rectangle2D.Double range) {
         range.x = -2;
-        range.y = -1.5;
-        range.width = 3;
-        range.height = 3;
+        range.y = -2;
+        range.width = 4;
+        range.height = 4;
     }
 
     @Override
@@ -21,7 +21,7 @@ public class Mandelbrot  extends FractalGenerator {
         while (iteration < MAX_ITERATIONS && z_real * z_real + z_imaginary * z_imaginary < 4)
         {
             double z_realUpdated = z_real * z_real - z_imaginary * z_imaginary + x;
-            double z_imaginaryUpdated = 2 * z_real * z_imaginary + y;
+            double z_imaginaryUpdated = -2 * z_real * z_imaginary + y;
             z_real = z_realUpdated;
             z_imaginary = z_imaginaryUpdated;
             iteration += 1;
@@ -34,10 +34,9 @@ public class Mandelbrot  extends FractalGenerator {
         }
 
         return iteration;
-
     }
 
     public String toString(){
-        return "Mandelbrot";
+        return "Tricorn";
     }
 }
