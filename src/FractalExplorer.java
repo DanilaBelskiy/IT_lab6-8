@@ -13,6 +13,11 @@ public class FractalExplorer {
     private JImageDisplay jDisplay;
     private FractalGenerator fractal;
     private Rectangle2D.Double range;
+    JComboBox comboBox;
+    JButton resetButton;
+    JButton saveButton;
+
+    private int rowsLost;
 
     public FractalExplorer (int display_size) {
         size = display_size;
@@ -28,7 +33,7 @@ public class FractalExplorer {
 
         frame.add(jDisplay, BorderLayout.CENTER);
 
-        JButton resetButton = new JButton("Reset");
+        resetButton = new JButton("Reset");
         ResetButtonHandler clearAction = new ResetButtonHandler();
         resetButton.addActionListener(clearAction);
 
@@ -38,7 +43,7 @@ public class FractalExplorer {
         frame.setDefaultCloseOperation(frame.EXIT_ON_CLOSE);
 
         String[] items = {"Mandelbrot", "Tricorn", "BurningShip"};
-        JComboBox comboBox = new JComboBox(items);
+        comboBox = new JComboBox(items);
 
         JLabel label = new JLabel("Fractal:");
         JPanel panelBox = new JPanel();
@@ -49,7 +54,7 @@ public class FractalExplorer {
         ChooseButtonHandler chooseAction = new ChooseButtonHandler();
         comboBox.addActionListener(chooseAction);
 
-        JButton saveButton = new JButton("Save Image");
+        saveButton = new JButton("Save Image");
         SaveImageButton saveAction = new SaveImageButton();
         saveButton.addActionListener(saveAction);
 
@@ -65,21 +70,17 @@ public class FractalExplorer {
     }
 
     private void drawFractal () {
-        for (int x = 0; x < size; x ++) {
-            for (int y = 0; y < size; y ++) {
-                double xCoord = fractal.getCoord(range.x,range.x + range.width, size, x);
-                double yCoord = fractal.getCoord(range.y, range.y + range.height, size, y);
-                int iterations = fractal.numIterations(xCoord,yCoord);
-
-                if (iterations == -1) jDisplay.drawPixel(x,y,0);
-                else {
-                    float hue = 0.7f + (float) iterations / 200f;
-                    int rgbColor = Color.HSBtoRGB(hue, 1f, 1f);
-                    jDisplay.drawPixel(x, y, rgbColor);
-                }
-            }
+        enableIO(false);
+        rowsLost = size;
+        for (int y = 0; y < size; y++){
+            FractalWorker frac = new FractalWorker(y);
+            frac.execute();
         }
-        jDisplay.repaint();
+    }
+    private void enableIO(boolean val){
+        comboBox.setEnabled(val);
+        resetButton.setEnabled(val);
+        saveButton.setEnabled(val);
     }
 
     public class ResetButtonHandler implements ActionListener {
@@ -122,7 +123,7 @@ public class FractalExplorer {
             int result = chooser.showSaveDialog(jDisplay);
             if (result == JFileChooser.APPROVE_OPTION) {
                 File dir = chooser.getSelectedFile();
-                //String dir_string = dir.toString();
+                String dir_string = dir.toString();
                 try{
                     BufferedImage image = jDisplay.getImage();
                     ImageIO.write(image, "png", dir);
@@ -137,6 +138,9 @@ public class FractalExplorer {
     private class MyMouseListener extends MouseAdapter {
         @Override
         public void mouseClicked(MouseEvent e) {
+            if (rowsLost!=0) {
+                return;
+            }
             int x = e.getX();
             double xCoord = fractal.getCoord(range.x, range.x+range.width, size,x);
 
@@ -146,6 +150,45 @@ public class FractalExplorer {
             fractal.recenterAndZoomRange(range, xCoord, yCoord, 0.5);
 
             drawFractal();
+        }
+    }
+
+    private class FractalWorker extends SwingWorker<Object,Object>{
+        private int y;
+        private int[] valuesRGB;
+
+        public FractalWorker (int y){
+            this.y = y;
+        }
+
+        @Override
+        protected Object doInBackground() throws Exception {
+            valuesRGB = new int[size];
+            for (int x = 0; x < valuesRGB.length; x ++) {
+                double xCoord = fractal.getCoord(range.x,range.x + range.width, size, x);
+                double yCoord = fractal.getCoord(range.y, range.y + range.height, size, y);
+                int iterations = fractal.numIterations(xCoord,yCoord);
+                int rgbColor;
+                if (iterations == -1)
+                    rgbColor = 0;
+                else {
+                    float hue = 0.7f + (float) iterations / 200f;
+                    rgbColor = Color.HSBtoRGB(hue, 1f, 1f);
+                }
+                valuesRGB[x] = rgbColor;
+            }
+            return null;
+        }
+
+        @Override
+        protected void done() {
+            for (int i = 0; i < valuesRGB.length; i ++) {
+                jDisplay.drawPixel(i,y,valuesRGB[i]);
+            }
+            jDisplay.repaint(0,0,y,size,1);
+            rowsLost--;
+            if (rowsLost == 0)
+                enableIO(true);
         }
     }
 
